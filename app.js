@@ -217,130 +217,123 @@ function renderDetail() {
     return;
   }
   const pids=ownedPids(a.id);
+  const sumLv=pids.reduce((s,pid)=>s+(state.planets[pid]?.lv||1),0);
   const daily=dailyTotal(a.id);
   const tp=soldierPower(a);
   const sc=score(a);
   const rk=rankOf(a.id);
-  const dArr=[daily.炉晶,daily.演晶,daily.鋼材,daily.暗黒];
-  const resKeys=['炉晶','演晶','鋼材','暗黒'];
-  const resIc={炉晶:'🔥',演晶:'💠',鋼材:'⚙️',暗黒:'🌑'};
-  const resCl={炉晶:'r炉',演晶:'r演',鋼材:'r鋼',暗黒:'r暗'};
+
+  const dailyArr=[daily.炉晶,daily.演晶,daily.鋼材,daily.暗黒];
 
   panel.innerHTML=`
   <div class="det-wrap">
 
-    <!-- ① HEADER STRIP (全幅・コンパクト) -->
+    <!-- ① HEADER ROW: 連合名 + KPI + 資源 + 付与ボタン (全幅横並び) -->
     <div class="det-header-strip">
 
-      <!-- 連合名・基本情報 -->
       <div class="det-name-block">
         <div class="det-name">${h(a.name)}</div>
         <div class="det-sub">
-          リーダー: <b>${h(a.leader)||'未設定'}</b>
-          &ensp;👥<b>${a.members}</b>人
-          &ensp;文明Lv<b>${a.civLv}</b> ${h(CIV[a.civLv-1].name)}
-          <button onclick="openEditA(${a.id})" class="btn-sm" style="margin-left:6px">✎</button>
+          リーダー: <b>${h(a.leader)||'未設定'}</b> ／ 👥<b>${a.members}</b>人
+          <button onclick="openEditA(${a.id})" class="btn-sm" style="margin-left:8px">✎ 編集</button>
+        </div>
+        <div class="det-sub" style="margin-top:3px">
+          文明Lv<b>${a.civLv}</b> ${h(CIV[a.civLv-1].name)}
+          &nbsp;／&nbsp; 範囲: ${h(CIV[a.civLv-1].range)}
         </div>
       </div>
 
-      <!-- KPI（2×2グリッド）+ 資源（2×2グリッド）+ 付与ボタン -->
-      <div class="det-right-header">
+      <div class="det-kpi-strip">
+        <div class="kpi"><span class="kpi-v" style="color:var(--gold)">${sc.toLocaleString()}</span><span class="kpi-l">SCORE</span></div>
+        <div class="kpi"><span class="kpi-v">#${rk}</span><span class="kpi-l">順位</span></div>
+        <div class="kpi"><span class="kpi-v" style="color:var(--green)">${pids.length}</span><span class="kpi-l">惑星数</span></div>
+        <div class="kpi"><span class="kpi-v">${tp.toLocaleString()}</span><span class="kpi-l">総戦闘力</span></div>
+      </div>
 
-        <div class="det-kpi-grid">
-          <div class="kpi"><span class="kpi-v" style="color:var(--gold)">${sc.toLocaleString()}</span><span class="kpi-l">SCORE</span></div>
-          <div class="kpi"><span class="kpi-v">#${rk}</span><span class="kpi-l">順位</span></div>
-          <div class="kpi"><span class="kpi-v" style="color:var(--green)">${pids.length}</span><span class="kpi-l">惑星数</span></div>
-          <div class="kpi"><span class="kpi-v">${tp.toLocaleString()}</span><span class="kpi-l">総戦闘力</span></div>
-        </div>
-
-        <div class="det-res-grid">
-          ${resKeys.map((k,i)=>`
-            <div class="res-row-item">
-              <span class="res-row-lbl">${resIc[k]}<span class="res-row-name">${k}</span></span>
-              <input class="num-inp ${resCl[k]}" type="number" min="0" value="${a.res[k]}"
+      <div class="det-res-strip">
+        ${['炉晶','演晶','鋼材','暗黒'].map((k,i)=>{
+          const ic={炉晶:'🔥',演晶:'💠',鋼材:'⚙️',暗黒:'🌑'}[k];
+          const cl={炉晶:'r炉',演晶:'r演',鋼材:'r鋼',暗黒:'r暗'}[k];
+          return `<div class="res-strip-item">
+            <div class="rs-label">${ic} ${k}</div>
+            <div class="rs-inp-row">
+              <button class="num-adj" onclick="adjRes(${a.id},'${k}',-1)">−</button>
+              <input class="num-inp ${cl}" type="number" min="0" value="${a.res[k]}"
                 onclick="this.select()" oninput="setResInp(${a.id},'${k}',this)"
-                onkeydown="numKey(event)" style="width:70px;font-size:13px" />
-              <span class="res-row-daily">+${dArr[i]}/日</span>
-            </div>`).join('')}
+                onkeydown="numKey(event)" style="width:72px" />
+              <button class="num-adj" onclick="adjRes(${a.id},'${k}',1)">＋</button>
+            </div>
+            <div class="rs-daily">+${dailyArr[i]}/日</div>
+          </div>`;
+        }).join('')}
+        <div class="res-strip-grant">
+          <button class="btn-primary" onclick="grantRes(${a.id})">📅 資源付与</button>
         </div>
+      </div>
 
-        <div class="det-grant-col">
-          <button class="btn-grant" onclick="grantRes(${a.id})">📅<br>資源<br>付与</button>
-          <button class="btn-grant accent2" onclick="grantSoldiers(${a.id})">⚔️<br>兵士<br>付与</button>
-        </div>
-
-      </div><!-- /det-right-header -->
     </div><!-- /det-header-strip -->
 
-    <!-- ② BODY -->
+    <!-- ② BODY: 左カラム（文明/兵士/外交/メモ）+ 右カラム（惑星グリッド） -->
     <div class="det-body">
 
       <div class="det-body-left">
 
-        <!-- 文明Lv + 兵士 を横2列 -->
-        <div class="det-two-col">
+        <!-- 文明レベル -->
+        <div class="det-section-title">文明レベル</div>
+        <div class="civ-compact-list">
+          ${CIV.map(c=>{
+            const cur=a.civLv===c.lv;
+            const costLabel=c.lv===1?'初期':`累積 炉・演×${c.cum_炉.toLocaleString()}${c.cum_鋼?` 鋼×${c.cum_鋼.toLocaleString()}`:''}${c.cum_暗?` 暗×${c.cum_暗}`:''}`;
+            return `<div class="civ-compact${cur?' cur':''}">
+              <span class="ccl-lv">Lv${c.lv}</span>
+              <span class="ccl-name">${h(c.name)}</span>
+              <span class="ccl-cost">${costLabel}</span>
+              <button class="ccl-btn${cur?' cur':''}" ${cur?'disabled':''} onclick="setCiv(${a.id},${c.lv})">${cur?'◆現在':'設定'}</button>
+            </div>`;
+          }).join('')}
+        </div>
 
-          <div class="det-two-pane">
-            <div class="det-section-title">文明レベル</div>
-            <div class="civ-compact-list">
-              ${CIV.map(c=>{
-                const cur=a.civLv===c.lv;
-                const cost=c.lv===1?'初期':`炉・演×${c.cum_炉.toLocaleString()}${c.cum_鋼?` 鋼×${c.cum_鋼.toLocaleString()}`:''}${c.cum_暗?` 暗×${c.cum_暗}`:''}`;
-                return `<div class="civ-compact${cur?' cur':''}">
-                  <span class="ccl-lv">Lv${c.lv}</span>
-                  <span class="ccl-name">${h(c.name)}</span>
-                  <button class="ccl-btn${cur?' cur':''}" ${cur?'disabled':''} onclick="setCiv(${a.id},${c.lv})" title="${cost}">${cur?'◆':'設定'}</button>
-                </div>`;
-              }).join('')}
-            </div>
-          </div>
+        <!-- 兵士 -->
+        <div class="det-section-title" style="margin-top:10px">兵士</div>
+        <div class="soldiers-compact">
+          ${SLVS.map(sl=>`
+            <div class="sc-row">
+              <span class="sc-lv">Lv${sl.lv}</span>
+              <span class="sc-name">${h(sl.name)}</span>
+              <span class="sc-pw">💪${sl.power}</span>
+              <div class="sc-inp-wrap">
+                <button class="num-adj" onclick="adjSoldier(${a.id},${sl.lv},-1)">−</button>
+                <input class="num-inp" type="number" min="0" value="${a.soldiers[sl.lv]||0}"
+                  onclick="this.select()" oninput="setSoldierInp(${a.id},${sl.lv},this)"
+                  onkeydown="numKey(event)" style="width:60px" />
+                <button class="num-adj" onclick="adjSoldier(${a.id},${sl.lv},1)">＋</button>
+              </div>
+            </div>`).join('')}
+        </div>
+        <button class="btn-primary" onclick="grantSoldiers(${a.id})"
+          style="margin-top:5px;width:100%;color:var(--accent2);border-color:rgba(160,64,255,.5)">⚔️ 1日分の兵士を付与</button>
 
-          <div class="det-two-pane">
-            <div class="det-section-title">兵士</div>
-            <div class="soldiers-compact">
-              ${SLVS.map(sl=>`
-                <div class="sc-row">
-                  <span class="sc-lv">Lv${sl.lv}</span>
-                  <span class="sc-name">${h(sl.name)}</span>
-                  <span class="sc-pw">×${sl.power}</span>
-                  <input class="num-inp" type="number" min="0" value="${a.soldiers[sl.lv]||0}"
-                    onclick="this.select()" oninput="setSoldierInp(${a.id},${sl.lv},this)"
-                    onkeydown="numKey(event)" style="width:52px;font-size:12px" />
-                </div>`).join('')}
-            </div>
-          </div>
+        <!-- 外交 -->
+        <div class="det-section-title" style="margin-top:10px">外交</div>
+        <div class="diplo-tags">
+          ${!a.allies.length?'<span class="dim">外交関係なし</span>'
+            :a.allies.map(al=>{
+              const lb={normal:'通常同盟',vassal:'属国',secret:'🤫秘密協定',war:'⚔️宣戦'}[al.type];
+              return `<span class="diplo-tag dt-${al.type}" onclick="removeDiplo(${a.id},${al.targetId})" title="クリックで削除">
+                ${lb} ${h(al.targetName)} ✕</span>`;
+            }).join('')}
+        </div>
+        <div class="diplo-add-row">
+          ${['normal','vassal','secret','war'].map(t=>{
+            const lb={normal:'通常同盟',vassal:'属国同盟',secret:'秘密協定',war:'宣戦布告'}[t];
+            return `<button class="btn-sm" onclick="openDiplo(${a.id},'${t}')">＋${lb}</button>`;
+          }).join('')}
+        </div>
 
-        </div><!-- /det-two-col -->
+        <!-- メモ -->
+        <div class="det-section-title" style="margin-top:10px">メモ</div>
+        <textarea class="notes-area" placeholder="メモ..." oninput="setNote(${a.id},this.value)">${h(a.notes)}</textarea>
 
-        <!-- 外交 + メモ を横2列 -->
-        <div class="det-two-col" style="margin-top:8px;flex:1;min-height:0">
-
-          <div class="det-two-pane">
-            <div class="det-section-title">外交</div>
-            <div class="diplo-tags" style="margin-bottom:5px">
-              ${!a.allies.length?'<span class="dim">なし</span>'
-                :a.allies.map(al=>{
-                  const lb={normal:'通常',vassal:'属国',secret:'🤫秘密',war:'⚔️宣戦'}[al.type];
-                  return `<span class="diplo-tag dt-${al.type}" onclick="removeDiplo(${a.id},${al.targetId})" title="クリックで削除">
-                    ${lb} ${h(al.targetName)} ✕</span>`;
-                }).join('')}
-            </div>
-            <div class="diplo-add-row">
-              ${['normal','vassal','secret','war'].map(t=>{
-                const lb={normal:'通常',vassal:'属国',secret:'秘密協定',war:'宣戦'}[t];
-                return `<button class="btn-sm" onclick="openDiplo(${a.id},'${t}')">＋${lb}</button>`;
-              }).join('')}
-            </div>
-          </div>
-
-          <div class="det-two-pane" style="display:flex;flex-direction:column">
-            <div class="det-section-title">メモ</div>
-            <textarea class="notes-area" style="flex:1;min-height:60px" placeholder="メモ..." oninput="setNote(${a.id},this.value)">${h(a.notes)}</textarea>
-          </div>
-
-        </div><!-- /det-two-col -->
-
-        <!-- 削除ボタン（一番下） -->
         <button class="btn-danger" onclick="deleteA(${a.id})" style="margin-top:8px;width:100%">連合を削除</button>
 
       </div><!-- /det-body-left -->
@@ -348,8 +341,8 @@ function renderDetail() {
       <!-- 惑星グリッド -->
       <div class="det-body-right">
         <div class="det-section-title">
-          惑星 (${pids.length}/120)
-          <span class="dim" style="font-size:9px;font-weight:400;margin-left:6px">クリックで取得／解放 ／ 自分の惑星はLv変更可</span>
+          惑星 (${pids.length}/120) &nbsp;
+          <span class="dim" style="font-size:10px;font-weight:400">クリックで取得 ／ 自分の惑星はクリックで解放</span>
         </div>
         ${renderPlanetGrid(a)}
       </div>
@@ -358,58 +351,55 @@ function renderDetail() {
   </div>`;
 }
 
-/* ── Planet quick grid ──────────────────────────────────── */
+/* ── Planet quick grid (12×10) for alliance detail ────── */
 function renderPlanetGrid(a) {
+  // 全120惑星を順に 12列10行 で並べる
+  // cluster 1-5, galaxy 1-6, num 1-4 → 5×6×4=120
   const allPids=[];
   for(let c=1;c<=5;c++) for(let g=1;g<=6;g++) for(let n=1;n<=4;n++) allPids.push(`${c}-${g}-${n}`);
 
-  const cells=allPids.map(pid=>{
+  const cells = allPids.map(pid=>{
     const p=state.planets[pid];
     const type=getPlanetType(pid);
     const lv=p?.lv||1;
     const ownerId=p?.owner||null;
     const owner=ownerId?state.alliances.find(x=>x.id===ownerId):null;
     const isMine=ownerId===a.id;
-    const isTaken=ownerId!==null&&!isMine;
-    const tc={炉:'var(--res-炉)',演:'var(--res-演)',資:'var(--res-鋼)',要:'var(--accent3)',未:'var(--res-暗)'}[type];
+    const isTaken=ownerId!==null && !isMine;
 
-    let cls='pgcell'+(isMine?' mine':isTaken?' taken':' free');
-    const clickAttr=isTaken?'':isMine
-      ?`onclick="releasePlanet('${pid}',${a.id})"`
-      :`onclick="claimPlanet('${pid}',${a.id})"`;
-    const tip=isMine?`${pid} Lv${lv} ─ 自分（クリックで解放）`
+    let cls='pgcell';
+    if(isMine)  cls+=' mine';
+    else if(isTaken) cls+=' taken';
+    else cls+=' free';
+
+    const typeColor={炉:'var(--res-炉)',演:'var(--res-演)',資:'var(--res-鋼)',要:'var(--accent3)',未:'var(--res-暗)'}[type];
+
+    const onclick = isTaken ? '' : isMine
+      ? `onclick="releasePlanet('${pid}',${a.id})"`
+      : `onclick="claimPlanet('${pid}',${a.id})"`;
+
+    const titleStr=isMine?`${pid} Lv${lv} ─ 自分の惑星（クリックで解放）`
       :isTaken?`${pid} Lv${lv} ─ ${owner?.name||'?'} 所有`
-      :`${pid} ─ クリックで取得`;
+      :`${pid} Lv${lv} ─ クリックで取得`;
 
-    // 自分の惑星にLv変更セレクト
-    const lvSel=isMine
-      ?`<select class="pg-lv-sel" onclick="event.stopPropagation()" onchange="setPlanetLvGrid('${pid}',this.value,${a.id})">
-          ${PLV.map(l=>`<option value="${l.lv}"${lv===l.lv?' selected':''}>${l.lv}</option>`).join('')}
-        </select>`
-      :`<span class="pg-lv">${isTaken?`Lv${lv}`:''}</span>`;
-
-    const ownLabel=isMine?'◆':isTaken?(owner?.name?owner.name.slice(0,5):'?'):'';
-
-    return `<div class="${cls}" ${clickAttr} title="${h(tip)}" style="--tc:${tc}">
-      <div class="pg-top-row">
-        <span class="pg-id">${pid}</span>
-        ${lvSel}
-      </div>
-      <div class="pg-own">${ownLabel}</div>
+    return `<div class="${cls}" ${onclick} title="${h(titleStr)}" style="--tc:${typeColor}">
+      <div class="pg-id">${pid}</div>
+      <div class="pg-lv">${isMine||isTaken?`Lv${lv}`:''}</div>
+      <div class="pg-own">${isMine?'◆':isTaken?(owner?.name?owner.name.slice(0,4):'?'):''}</div>
     </div>`;
   });
 
   return `<div class="planet-qgrid">${cells.join('')}</div>
-    <div class="pg-legend">
-      <span style="color:var(--green)">◆自分</span>
-      <span style="color:var(--text-dim)">■他所有</span>
-      <span>□空き</span>
-      &ensp;
-      <span style="color:var(--res-炉)">■炉</span>
-      <span style="color:var(--res-演)">■演</span>
-      <span style="color:var(--res-鋼)">■資</span>
-      <span style="color:var(--accent3)">■要</span>
-      <span style="color:var(--res-暗)">■未</span>
+    <div style="margin-top:6px;font-family:var(--font-mono);font-size:10px;display:flex;gap:12px;flex-wrap:wrap;">
+      <span style="color:var(--green)">◆ 自分</span>
+      <span style="color:var(--text-dim)">■ 他所有</span>
+      <span style="color:var(--text)">□ 空き</span>
+      &nbsp;|&nbsp;
+      <span style="color:var(--res-炉)">■炉晶</span>
+      <span style="color:var(--res-演)">■演晶</span>
+      <span style="color:var(--res-鋼)">■資源</span>
+      <span style="color:var(--accent3)">■要塞</span>
+      <span style="color:var(--res-暗)">■未開拓</span>
     </div>`;
 }
 
@@ -427,14 +417,6 @@ function releasePlanet(pid, aid) {
   p.owner=null;
   renderDetail(); renderAllianceList();
   toast(`惑星 ${pid} を解放しました`);
-}
-
-function setPlanetLvGrid(pid, lv, aid) {
-  const p=state.planets[pid]; if(!p) return;
-  p.lv=parseInt(lv);
-  const a=state.alliances.find(x=>x.id===aid);
-  if(a && p.lv>a.civLv) toast(`⚠️ 惑星Lv(${p.lv})が文明Lv(${a.civLv})を超えています`);
-  renderDetail(); renderAllianceList();
 }
 
 /* ============================================================
@@ -569,11 +551,13 @@ function renderPlanetsPage() {
         if(fl!=='all'&&lv!==parseInt(fl)) continue;
 
         const cls=owner?'planet-cell-owned':'planet-cell-empty';
+        const outStr=Object.entries(planetOutput(pid)).filter(([,v])=>v>0).map(([k,v])=>`${k[0]}${v}`).join(' ');
         rHtml+=`<div class="planet-cell ${cls}" onclick="openPlanetModal('${pid}')">
           <div class="planet-cell-id">${pid}</div>
-          <div class="planet-cell-type"><span class="type-badge tb${type}">${type}</span></div>
+          <span class="type-badge tb${type}" style="font-size:8px">${TYPE_LABEL[type]}</span>
           <div class="planet-cell-lv">Lv${lv}</div>
-          <div class="planet-cell-owner">${h(owner?.name||'—')}</div>
+          <div class="planet-cell-owner">${h(owner?.name||'無所属')}</div>
+          <div class="planet-cell-output">${outStr||'—'}</div>
         </div>`;
       }
       if(!rHtml) continue;
