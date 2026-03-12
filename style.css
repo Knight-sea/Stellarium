@@ -1607,3 +1607,144 @@ a { color: var(--accent); text-decoration: none; }
 .tb要 { background: rgba(255,96,48,0.18); color: var(--accent3); border: 1px solid rgba(255,96,48,0.3); }
 .tb未 { background: rgba(192,96,255,0.18); color: var(--res-暗); border: 1px solid rgba(192,96,255,0.3); }
 
+
+/* ============================================================
+   PATCH — ±ボタン・惑星マップ・戦力計算レイアウト修正
+   ============================================================ */
+
+/* spinner 非表示 */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type='number'] { -moz-appearance: textfield; }
+
+/* 順位色を白で統一 */
+.rank-badge, .rank-badge.r1, .rank-badge.r2, .rank-badge.r3, .rank-badge.rbottom,
+.ai-rank-badge, .ai-rank-badge.r1, .ai-rank-badge.r2, .ai-rank-badge.rbottom,
+.rank-num, .rank-num.r1, .rank-num.r2, .rank-num.rbottom,
+.rank-big, .rank-big.r1, .rank-big.r2, .rank-big.rbottom { color: var(--text) !important; }
+
+/* ── ±ボタン共通 ─────────────────────────────────────────── */
+.pm-btn {
+  background: rgba(58,174,255,.07); border: 1px solid var(--border);
+  color: var(--text-mid); font-family: var(--font-mono); font-size: 10px;
+  padding: 2px 6px; border-radius: 2px; cursor: pointer;
+  transition: all .1s; white-space: nowrap; flex-shrink: 0;
+}
+.pm-btn:hover { background: rgba(58,174,255,.2); border-color: var(--border-hi); color: var(--accent); }
+.pm-btn:active { transform: scale(.93); }
+
+/* ── リスト slim ─────────────────────────────────────────── */
+.alliance-item { padding: 6px 12px; }
+.ai-top { margin-bottom: 2px; }
+.ai-name { font-size: 12px; }
+.ai-meta { gap: 6px; flex-wrap: nowrap; }
+.ai-planet-count { font-family: var(--font-mono); font-size: 10px; }
+
+/* ── 資源 ±rows ──────────────────────────────────────────── */
+.res-grid-pm { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.res-pm-row {
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(4,9,24,.8); border: 1px solid var(--border);
+  border-radius: 3px; padding: 3px 8px;
+}
+.res-pm-lbl { font-size: 11px; color: var(--text-dim); width: 70px; flex-shrink: 0; }
+.res-num-inp {
+  width: 72px; background: rgba(0,0,0,.55); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--font-mono); font-size: 13px; font-weight: bold;
+  text-align: center; padding: 2px 4px; border-radius: 2px; outline: none;
+}
+.res-num-inp:focus { border-color: var(--border-hi); }
+.res-num-inp.r炉 { color: var(--res-炉); }
+.res-num-inp.r演 { color: var(--res-演); }
+.res-num-inp.r鋼 { color: var(--res-鋼); }
+.res-num-inp.r暗 { color: var(--res-暗); }
+
+/* ── 兵士 ±rows ──────────────────────────────────────────── */
+.soldiers-pm-grid { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+.sol-pm-row {
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(4,9,24,.7); border: 1px solid var(--border);
+  border-radius: 3px; padding: 3px 8px;
+}
+.sol-pm-lbl { font-size: 11px; width: 140px; flex-shrink: 0; white-space: nowrap; }
+.sol-pm-name { color: var(--text-mid); }
+.sol-pm-pw   { font-family: var(--font-mono); font-size: 10px; color: var(--gold); }
+.sol-num-inp {
+  width: 60px; background: rgba(0,0,0,.55); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--font-mono); font-size: 13px; font-weight: bold;
+  text-align: center; padding: 2px 4px; border-radius: 2px; outline: none;
+}
+.sol-num-inp:focus { border-color: var(--border-hi); }
+
+/* ── 戦力計算: 列を揃える ────────────────────────────────── */
+/* Lv | 名前 | ×倍率 | −10 | −1 | [入力] | +1 | +10 */
+.bt-soldier-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 46px 44px 36px 54px 36px 44px;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.bt-input {
+  background: rgba(0,0,0,.55); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--font-mono); font-size: 13px; font-weight: bold;
+  text-align: center; padding: 3px 4px; border-radius: 2px; outline: none; width: 100%;
+  transition: border-color .2s;
+}
+.bt-input:focus { border-color: var(--border-hi); }
+/* ±ボタンをbt-soldier-row内でも同じ高さに */
+.bt-soldier-row .pm-btn { padding: 3px 6px; width: 100%; text-align: center; }
+
+/* ── 惑星マップ: フラット12×10グリッド ──────────────────── */
+.planet-flat-grid {
+  display: grid;
+  grid-template-columns: 46px repeat(12, 1fr);
+  gap: 2px;
+  width: 100%;
+}
+.pfl-label {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.4); border: 1px solid var(--border); border-radius: 3px; padding: 2px;
+}
+.pfl-cluster { font-family: var(--font-mono); color: var(--accent); font-size: 8px; font-weight: 700; text-align: center; }
+.pfl-galaxy  { color: var(--text-dim); font-size: 8px; text-align: center; }
+
+.planet-flat-cell {
+  border-left: 3px solid var(--tc, var(--border));
+  border-radius: 3px; padding: 4px 4px; cursor: pointer;
+  transition: filter .12s; min-height: 52px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.planet-flat-cell:hover { filter: brightness(1.25); }
+.pfc-owned {
+  background: rgba(4,16,8,.9); border: 1px solid rgba(48,255,160,.3);
+  border-left-color: var(--tc, var(--green));
+}
+.pfc-empty {
+  background: rgba(4,9,24,.7); border: 1px solid var(--border);
+  border-left-color: var(--tc, var(--border));
+}
+.planet-flat-hidden { background: transparent; border: 1px solid transparent; cursor: default; min-height: 52px; }
+.planet-flat-hidden:hover { filter: none; }
+
+.pfc-row1, .pfc-row2 {
+  display: flex; align-items: center; justify-content: space-between; gap: 2px;
+}
+/* ID (小さめ) */
+.pfc-id  { font-family: var(--font-mono); font-size: 8px; font-weight: bold; color: var(--text); }
+/* Lv */
+.pfc-lv  { font-family: var(--font-mono); font-size: 9px; color: var(--gold); font-weight: bold; }
+/* 所有者名: 2倍 (8px → 16px) */
+.pfc-own {
+  font-size: 16px;
+  color: var(--text-mid);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 100%;
+  line-height: 1;
+}
+.pfc-owned .pfc-own { color: var(--green); }
+
+.planet-flat-cell .type-badge { font-size: 7px; padding: 0 2px; }
+
+/* 惑星IDを2倍 (8px → 16px) */
+.pfc-id { font-size: 16px !important; line-height: 1; }

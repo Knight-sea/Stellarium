@@ -11,7 +11,7 @@ const CLASSES = ['A','B','C','D','E'];
 const PLANET_NUM_TYPE = { 1:'資', 2:'炉', 3:'演', 4:'要' };
 // 銀河団5の惑星4(10個)は未開拓型
 const UNEXPLORED_IDS = new Set(
-  Array.from({ length: 6 }, (_, g) => `5-${g+1}-4`)
+  [1,2,3,4,5].flatMap(c => [`${c}-3-4`, `${c}-6-4`])
 );
 // 銀河団1〜4の銀河6の惑星4(4個)も未開拓型 → 合計10個
 [1,2,3,4].forEach(c => UNEXPLORED_IDS.add(`${c}-6-4`));
@@ -173,9 +173,6 @@ function getRankOf(id) {
 }
 
 function getRankClass(rank, total) {
-  if (rank === 1) return 'r1';
-  if (rank <= 3) return 'r2';
-  if (rank >= total - 2) return 'rbottom';
   return '';
 }
 
@@ -223,12 +220,14 @@ function showPage(page) {
 
 /* ── Day ───────────────────────────────────────────────── */
 function changeDay(d) {
-  state.day = Math.max(1, Math.min(7, state.day+d));
-  byId('day-badge').textContent = 'DAY '+state.day;
+  state.day = Math.max(1, Math.min(56, state.day + d));
+  const dayNum = Math.ceil(state.day / 8);
+  const periodNum = ((state.day - 1) % 8) + 1;
+  byId('day-badge').textContent = `[${dayNum}-${periodNum}]`;
   const badge = byId('galactic-war-badge');
-  if (state.day === 7) {
+  if (dayNum === 7) {
     badge.classList.add('visible');
-    toast('🌌 最終日！第3・第4周期に銀河大戦争が自動発動します', 4000);
+    toast('🌌 最終日！銀河大戦争が自動発動します', 4000);
   } else badge.classList.remove('visible');
 }
 
@@ -252,18 +251,9 @@ function renderAllianceList() {
       </div>
       <div class="ai-meta">
         <span class="civ-lv-tag">Lv${a.civLv}</span>
-        <span>${h(CIV_LEVELS[a.civLv-1].name)}</span>
         <span class="ai-members">👥${a.members}</span>
-      </div>
-      <div class="ai-res">
-        <span class="res-pill r炉">炉${a.res.炉晶}</span>
-        <span class="res-pill r演">演${a.res.演晶}</span>
-        <span class="res-pill r鋼">鋼${a.res.鋼材}</span>
-        <span class="res-pill r暗">暗${a.res.暗黒}</span>
-      </div>
-      <div class="ai-rank-row">
+        <span class="ai-planet-count">${pids.length}🪐</span>
         <span class="ai-rank-badge ${rc}">#${rank}</span>
-        <span class="ai-planet-count">${pids.length}惑星</span>
       </div>
     </div>`;
   }).join('');
@@ -333,15 +323,21 @@ function renderAllianceDetail() {
     </div>
 
     <div class="sec-title">■ RESOURCES</div>
-    <div class="res-grid">
+    <div class="res-grid-pm">
       ${['炉晶','演晶','鋼材','暗黒'].map(k => {
         const icons={炉晶:'🔥',演晶:'💠',鋼材:'⚙️',暗黒:'🌑'};
-        return `<div class="res-card rc${k}">
-          <div class="res-card-icon">${icons[k]}</div>
-          <div class="res-card-lbl">${k}</div>
-          <div class="res-card-val">${a.res[k]}</div>
-          <input class="res-card-input" type="number" min="0" value="${a.res[k]}"
-            onchange="setRes(${a.id},'${k}',this.value)" />
+        const cls={炉晶:'r炉',演晶:'r演',鋼材:'r鋼',暗黒:'r暗'}[k];
+        return `<div class="res-pm-row">
+          <span class="res-pm-lbl">${icons[k]} ${k}</span>
+          <button class="pm-btn" onclick="adjRes(${a.id},'${k}',-100)">−100</button>
+          <button class="pm-btn" onclick="adjRes(${a.id},'${k}',-10)">−10</button>
+          <button class="pm-btn" onclick="adjRes(${a.id},'${k}',-1)">−1</button>
+          <input class="res-num-inp ${cls}" type="number" min="0" value="${a.res[k]}"
+            onclick="this.select()" onchange="setRes(${a.id},'${k}',this.value)"
+            onkeydown="tabNext(event,'.res-num-inp,.sol-num-inp')" />
+          <button class="pm-btn" onclick="adjRes(${a.id},'${k}',1)">+1</button>
+          <button class="pm-btn" onclick="adjRes(${a.id},'${k}',10)">+10</button>
+          <button class="pm-btn" onclick="adjRes(${a.id},'${k}',100)">+100</button>
         </div>`;
       }).join('')}
     </div>
@@ -371,14 +367,17 @@ function renderAllianceDetail() {
     </div>
 
     <div class="sec-title">■ SOLDIERS</div>
-    <div class="soldiers-grid">
+    <div class="soldiers-pm-grid">
       ${SOLDIER_LV.map(sl => `
-        <div class="soldier-card">
-          <div class="soldier-lv">${sl.lv}</div>
-          <div class="soldier-name">${h(sl.name)}</div>
-          <div class="soldier-power">💪${sl.power}</div>
-          <input class="soldier-input" type="number" min="0" value="${a.soldiers[sl.lv]||0}"
-            onchange="setSoldier(${a.id},${sl.lv},this.value)" />
+        <div class="sol-pm-row">
+          <span class="sol-pm-lbl">Lv${sl.lv} <span class="sol-pm-name">${h(sl.name)}</span> <span class="sol-pm-pw">×${sl.power}</span></span>
+          <button class="pm-btn" onclick="adjSoldier(${a.id},${sl.lv},-10)">−10</button>
+          <button class="pm-btn" onclick="adjSoldier(${a.id},${sl.lv},-1)">−1</button>
+          <input class="sol-num-inp" type="number" min="0" value="${a.soldiers[sl.lv]||0}"
+            onclick="this.select()" onchange="setSoldier(${a.id},${sl.lv},this.value)"
+            onkeydown="tabNext(event,'.res-num-inp,.sol-num-inp')" />
+          <button class="pm-btn" onclick="adjSoldier(${a.id},${sl.lv},1)">+1</button>
+          <button class="pm-btn" onclick="adjSoldier(${a.id},${sl.lv},10)">+10</button>
         </div>`).join('')}
     </div>
     <div class="total-power-row">
@@ -604,89 +603,77 @@ function buildPlanetFilterOwnerOptions() {
 }
 
 function renderPlanetsPage() {
-  const container  = byId('planets-map-inner');
+  const container   = byId('planets-map-inner');
   const filterOwner = byId('planet-filter-owner')?.value || 'all';
   const filterType  = byId('planet-filter-type')?.value  || 'all';
   const filterLv    = byId('planet-filter-lv')?.value    || 'all';
-
-  // 統計
   let total=0, owned=0;
   const typeCount = {};
-
-  let html = '';
-  for (let cluster = 1; cluster <= 5; cluster++) {
-    let clusterHtml = '';
-    for (let galaxy = 1; galaxy <= 6; galaxy++) {
-      let rowHtml = '';
-      for (let num = 1; num <= 4; num++) {
-        const pid   = `${cluster}-${galaxy}-${num}`;
-        const p     = state.planets[pid];
-        const type  = getPlanetType(pid);
-        const lv    = p?.lv||1;
-        const owner = p?.owner ? state.alliances.find(x => x.id===p.owner) : null;
-        total++;
-        if (owner) owned++;
-        typeCount[type] = (typeCount[type]||0)+1;
-
-        // フィルタ
-        if (filterOwner === 'unowned' && owner) continue;
-        if (filterOwner !== 'all' && filterOwner !== 'unowned' && (!owner || owner.id !== parseInt(filterOwner))) continue;
-        if (filterType !== 'all' && type !== filterType) continue;
-        if (filterLv !== 'all' && lv !== parseInt(filterLv)) continue;
-
-        const ownerName = owner ? owner.name : '無所属';
-        const ownerCls  = owner ? 'planet-cell-owned' : 'planet-cell-empty';
-        const outStr = Object.entries(getPlanetDailyOutput(pid)).filter(([,v])=>v>0).map(([k,v])=>`${k[0]}${v}`).join(' ');
-        rowHtml += `<div class="planet-cell ${ownerCls}" onclick="openPlanetDetailModal('${pid}')">
-          <div class="planet-cell-id">${pid}</div>
-          <span class="type-badge tb${type} planet-cell-type">${PLANET_TYPE_LABELS[type]||type}</span>
-          <div class="planet-cell-lv">Lv${lv}</div>
-          <div class="planet-cell-owner" title="${h(ownerName)}">${h(ownerName)}</div>
-          <div class="planet-cell-output">${outStr||'—'}</div>
-        </div>`;
-      }
-      if (!rowHtml) continue;
-      clusterHtml += `<div class="galaxy-row">
-        <div class="galaxy-label">
-          <span class="galaxy-num">銀河${galaxy}</span>
-          <span class="galaxy-grade">${GRADES[galaxy-1]}</span>
-        </div>
-        <div class="planet-row-cells">${rowHtml}</div>
+  const allPids = [];
+  for (let c=1;c<=5;c++) for (let g=1;g<=6;g++) for (let n=1;n<=4;n++)
+    allPids.push(`${c}-${g}-${n}`);
+  allPids.forEach(pid => {
+    const p = state.planets[pid];
+    const type = getPlanetType(pid);
+    const owner = p?.owner ? state.alliances.find(x => x.id===p.owner) : null;
+    total++; if (owner) owned++;
+    typeCount[type] = (typeCount[type]||0)+1;
+  });
+  const statsEl = byId('planet-stats');
+  if (statsEl) statsEl.innerHTML = `総数: <b>${total}</b> 所有: <b style="color:var(--green)">${owned}</b> 空き: <b>${total-owned}</b>&nbsp;|&nbsp; 炉:${typeCount['炉']||0} 演:${typeCount['演']||0} 資:${typeCount['資']||0} 要:${typeCount['要']||0} 未:${typeCount['未']||0}`;
+  let gridHtml = '<div class="planet-flat-grid">';
+  for (let row = 0; row < 10; row++) {
+    const [rc, rg] = allPids[row*12].split('-').map(Number);
+    gridHtml += `<div class="pfl-label"><span class="pfl-cluster">団${rc}</span><span class="pfl-galaxy">${GRADES[rg-1]}</span></div>`;
+    for (let col = 0; col < 12; col++) {
+      const pid   = allPids[row*12 + col];
+      const p     = state.planets[pid];
+      const type  = getPlanetType(pid);
+      const lv    = p?.lv||1;
+      const owner = p?.owner ? state.alliances.find(x => x.id===p.owner) : null;
+      const tc    = {炉:'var(--res-炉)',演:'var(--res-演)',資:'var(--res-鋼)',要:'var(--accent3)',未:'var(--res-暗)'}[type];
+      const hide = (filterOwner==='unowned'&&owner)
+        ||(filterOwner!=='all'&&filterOwner!=='unowned'&&(!owner||owner.id!==parseInt(filterOwner)))
+        ||(filterType!=='all'&&type!==filterType)
+        ||(filterLv!=='all'&&lv!==parseInt(filterLv));
+      if (hide) { gridHtml += `<div class="planet-flat-cell planet-flat-hidden"></div>`; continue; }
+      const ownCls = owner ? 'pfc-owned' : 'pfc-empty';
+      gridHtml += `<div class="planet-flat-cell ${ownCls}" onclick="openPlanetDetailModal('${pid}')" style="--tc:${tc}">
+        <div class="pfc-row1"><span class="pfc-id">${pid}</span><span class="type-badge tb${type}">${type}</span></div>
+        <div class="pfc-row2"><span class="pfc-lv">Lv${lv}</span><span class="pfc-own">${h(owner ? owner.name : '—')}</span></div>
       </div>`;
     }
-    if (!clusterHtml) continue;
-    html += `<div class="planet-cluster-block">
-      <div class="cluster-title">
-        🌌 銀河団 ${cluster}
-        <span class="cluster-sub">クラス${CLASSES[cluster-1]}</span>
-      </div>
-      ${clusterHtml}
-    </div>`;
   }
-
-  // 統計バー更新
-  const statsEl = byId('planet-stats');
-  if (statsEl) {
-    statsEl.innerHTML = `総数: <b>${total}</b> ／ 所有済: <b style="color:var(--green)">${owned}</b> ／ 無所属: <b style="color:var(--text-dim)">${total-owned}</b>
-      &nbsp;|&nbsp; 炉:${typeCount['炉']||0} 演:${typeCount['演']||0} 資:${typeCount['資']||0} 要:${typeCount['要']||0} 未:${typeCount['未']||0}`;
-  }
-
-  container.innerHTML = html || '<div class="text-dim" style="padding:24px;text-align:center">条件に一致する惑星がありません</div>';
+  gridHtml += '</div>';
+  container.innerHTML = gridHtml;
 }
 
 /* ============================================================
    BATTLE CALCULATOR
    ============================================================ */
+function adjBt(side, lv, d) {
+  const inp = byId(`bt-${side}-s${lv}`);
+  if (!inp) return;
+  inp.value = Math.max(0, (parseInt(inp.value)||0) + d);
+  calcBattle();
+}
+
 function initBattleCalc() {
   ['atk','def'].forEach(side => {
     const container = byId(`bt-${side}-soldiers`);
-    if (container.innerHTML.trim()) return; // 既に構築済みなら再構築しない
+    if (container.innerHTML.trim()) return;
     container.innerHTML = SOLDIER_LV.map(sl => `
       <div class="bt-soldier-row">
         <div class="bt-lv-badge">${sl.lv}</div>
         <div class="bt-name">${h(sl.name)}</div>
         <div class="bt-power-tag">×${sl.power}</div>
-        <input class="bt-input" id="bt-${side}-s${sl.lv}" type="number" min="0" value="0" oninput="calcBattle()" />
+        <button class="pm-btn" onclick="adjBt('${side}',${sl.lv},-10)">−10</button>
+        <button class="pm-btn" onclick="adjBt('${side}',${sl.lv},-1)">−1</button>
+        <input class="bt-input" id="bt-${side}-s${sl.lv}" type="number" min="0" value="0"
+          onclick="this.select()" oninput="calcBattle()"
+          onkeydown="tabNext(event,'.bt-input')" />
+        <button class="pm-btn" onclick="adjBt('${side}',${sl.lv},1)">+1</button>
+        <button class="pm-btn" onclick="adjBt('${side}',${sl.lv},10)">+10</button>
       </div>`).join('');
   });
   calcBattle();
@@ -928,7 +915,7 @@ function initAllAlliances() {
   // デフォルト惑星: 惑星番号1 (資源型)
   GRADES.forEach((grade, gi) => {
     CLASSES.forEach((cls, ci) => {
-      const a = makeAlliance(`${grade}${cls}クラス連合`);
+      const a = makeAlliance(`${gi+1}-${cls}`);
       a.members = 40;
       state.alliances.push(a);
 
@@ -950,3 +937,26 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAllianceList();
   renderSummaryPanel();
 });
+
+/* helpers */
+function adjRes(id, key, delta) {
+  const a = state.alliances.find(x => x.id === id); if (!a) return;
+  a.res[key] = Math.max(0, (a.res[key]||0) + delta);
+  renderAllianceDetail(); renderAllianceList(); renderSummaryPanel();
+}
+function adjSoldier(id, lv, delta) {
+  const a = state.alliances.find(x => x.id === id); if (!a) return;
+  a.soldiers[lv] = Math.max(0, (a.soldiers[lv]||0) + delta);
+  renderAllianceDetail();
+  const el = byId(`total-power-${id}`);
+  if (el) el.textContent = calcTotalSoldierPower(a).toLocaleString();
+  renderSummaryPanel();
+}
+function tabNext(event, selector) {
+  if (event.key === 'Enter' || event.key === 'Tab') {
+    event.preventDefault();
+    const all = [...document.querySelectorAll(selector)];
+    const i = all.indexOf(event.target);
+    if (i >= 0 && all[i+1]) { all[i+1].focus(); all[i+1].select(); }
+  }
+}
